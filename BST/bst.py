@@ -27,7 +27,7 @@ class TreeNode:
     def hasAnyChild(self):
         return self.leftChild or self.rightChild
 
-    def hasBothChild(self):
+    def hasBothChildren(self):
         return self.leftChild and self.rightChild
 
     def replaceNodeData(self, key, val, lc, rc):
@@ -40,6 +40,55 @@ class TreeNode:
         if self.hasRightChild():
             self.rightChild.parent = self
 
+    def findSuccessor(self):
+        succ = None
+        if self.hasRightChild():
+            succ = self.rightChild.findMin()
+        else:
+            if self.parent:
+                if self.isLeftChild():
+                    succ = self.parent
+                else:
+                    self.parent.rightChild = None
+                    succ = self.parent.findSuccessor()
+                    self.parent.rightChild = self
+        return succ
+
+    def findMin(self):
+        currentNode = self
+        while currentNode.hasLeftChild():
+            currentNode = currentNode.leftChild
+        return currentNode
+
+    def spliceOut(self):
+        '''successor is guarenteed to have no more than one child'''
+        if self.isLeaf():
+            if self.isLeftChild():
+                self.parent.leftChild = None
+            else:
+                self.parent.rightChild = None
+        else:
+            if self.hasLeftChild():
+                if self.isLeftChild():
+                    self.parent.leftChild = self.leftChild
+                else:
+                    self.parent.rightChild = self.leftChild
+                self.leftChild.parent = self.parent
+            else:
+                if self.isLeftChild():
+                    self.parent.leftChild = self.rightChild
+                else:
+                    self.parent.rightChild = self.rightChild
+
+    def __iter__(self):
+        if self:
+            if self.hasLeftChild():
+                for elem in self.leftChild:
+                    yield elem
+            yield self.key
+            if self.hasRightChild():
+                for elem in self.rightChild:
+                    yield elem
 
 class BinarySearchTree:
 
@@ -115,6 +164,9 @@ class BinarySearchTree:
         else:
             raise KeyError('Error , Key not in tree')
 
+    def __delitem__(self,key):
+       self.delete(key)
+
     def remove(self, currentNode):
         # The node to be deleted has no children
         if currentNode.isLeaf():
@@ -123,7 +175,12 @@ class BinarySearchTree:
             else:
                 currentNode.parent.rightChild = None
 
-        elif :
+        elif currentNode.hasBothChildren(): # interior
+            succ = currentNode.findSuccessor()
+            succ.spliceOut()
+            currentNode.value = succ.value
+            currentNode.key = succ.key
+
         else: # this node has one child
             if currentNode.hasLeftChild():
                 if currentNode.isLeftChild():
@@ -148,9 +205,8 @@ class BinarySearchTree:
                     currentNode.replaceNodeData(currentNode.rightChild.key,
                                                 currentNode.rightChild.value,
                                                 currentNode.rightChild.leftChild,
-                                                currentNode.rightChild.rightChild)   
-    def __delitem__(self, key):
-        self.delete(key)
+                                                currentNode.rightChild.rightChild)
+
 
     def canInsert(self, key, k):
         if self.root:
@@ -175,10 +231,9 @@ class BinarySearchTree:
         print(currentNode.key,end="\t")
         self.inorder(currentNode.rightChild)
 
-    # to do
-    # delete a TreeNode
     # Agumented BinarySearchTree for getting rank -> no of previous scheduled times (kth smallest element)
     # AVL tree for actual log(n)
+
 if __name__ == "__main__":
     print("Zebra Airlines -\n \t nobody takes you higher")
     print("-"*5,"Welcome to Single Runaway reservation system","-"*5)
@@ -186,7 +241,7 @@ if __name__ == "__main__":
     k = int(input("your data structure is ready.. enter k value\n"))
     close = False
     while not close:
-        c = int(input("enter choice:\n1.Request time\t2.Print schedule\t3.Exit\n"))
+        c = int(input("enter choice:\n1.Request time\t2.Print schedule\t3.delete time\t4.Exit\n"))
         if c == 1:
             time = int(input("Enter requesting time:\n"))
             if schedule.canInsert(time, k):
@@ -196,8 +251,17 @@ if __name__ == "__main__":
                 print("request failed")
         elif c == 2:
             print("Currently scheduled timings")
-            schedule.inorder(schedule.root)
+            #schedule.inorder(schedule.root)
+            for x in schedule.root:
+                print(x,end="\t")
+            print("")
         elif c == 3:
+            time = int(input("Enter delete time:\n"))
+            try :
+                del schedule[time]
+            except KeyError as e:
+                print("Error:", e)
+        elif c == 4:
             close = True
         else:
             print("Wrong choice")
